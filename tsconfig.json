@@ -14,8 +14,7 @@
   },
   "include": [
     "credentials/**/*",
-    "nodes/**/*",
-    "types/**/*"
+    "nodes/**/*"
   ],
   "exclude": [
     "node_modules/**/*",
