@@ -101,6 +101,9 @@ async function rawRequest(
 	body?: string,
 	extraHeaders?: Record<string, string>,
 ): Promise<{ status: number; statusText: string; body: string; headers: Headers }> {
+	// Resolve relative URLs against the server base URL
+	const absoluteUrl = url.startsWith('http') ? url : new URL(url, credentials.serverUrl as string).toString();
+
 	const authString = Buffer.from(
 		`${credentials.username as string}:${credentials.password as string}`,
 	).toString('base64');
@@ -113,7 +116,7 @@ async function rawRequest(
 		...extraHeaders,
 	};
 
-	const resp = await fetch(url, {
+	const resp = await fetch(absoluteUrl, {
 		method,
 		headers,
 		body: body || undefined,
@@ -753,6 +756,10 @@ export class Caldav implements INodeType {
 			return errorMessage;
 		};
 
+		// Create client and fetch calendars once, reuse across all items
+		const client = await createDavClient(credentials);
+		const calendars = await client.fetchCalendars();
+
 		for (let i = 0; i < items.length; i++) {
 			try {
 				if (operation === 'createEvent') {
@@ -764,9 +771,6 @@ export class Caldav implements INodeType {
 					const eventLocation = this.getNodeParameter('eventLocation', i, '') as string;
 
 					this.logger?.info(`[CalDAV CREATE] Starting creation of event: ${eventTitle}`);
-
-					const client = await createDavClient(credentials);
-					const calendars = await client.fetchCalendars();
 
 					const calendar = findCalendar(calendars, calendarUrl);
 					if (!calendar) {
@@ -841,9 +845,6 @@ export class Caldav implements INodeType {
 					const eventUID = this.getNodeParameter('eventUID', i) as string;
 
 					this.logger?.info(`[CalDAV DELETE] Starting deletion of event UID: ${eventUID}`);
-
-					const client = await createDavClient(credentials);
-					const calendars = await client.fetchCalendars();
 
 					const calendar = findCalendar(calendars, calendarUrl);
 					if (!calendar) {
@@ -934,9 +935,6 @@ export class Caldav implements INodeType {
 					const date = this.getNodeParameter('date', i) as string;
 
 					this.logger?.info(`[CalDAV GET] Getting events for date: ${date} from calendar: ${calendarUrl}`);
-
-					const client = await createDavClient(credentials);
-					const calendars = await client.fetchCalendars();
 
 					const calendar = findCalendar(calendars, calendarUrl);
 
