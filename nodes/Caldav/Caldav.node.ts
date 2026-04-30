@@ -536,7 +536,7 @@ export class Caldav implements INodeType {
 					if (!obj.calendarData) continue;
 					
 					const calendarData = obj.calendarData;
-					const uidMatch = calendarData.match(/UID:([^\r\n]+)/);
+					const uidMatch = calendarData.match(/UID(?:;[^:]*)?:([^\r\n]+)/);
 					
 					if (uidMatch && uidMatch[1].trim() === uid) {
 						// Проверяем и исправляем URL события если необходимо
@@ -1361,7 +1361,7 @@ export class Caldav implements INodeType {
 									}
 									
 									// Проверяем правила повторения (RRULE)
-									const rruleMatch = eventData.match(/RRULE:([^\r\n]+)/);
+									const rruleMatch = eventData.match(/RRULE(?:;[^:]*)?:([^\r\n]+)/);
 									if (rruleMatch && isRecurringEventOnDate(eventDate, targetDate, rruleMatch[1], eventData)) {
 										// Для повторяющихся событий рассчитываем актуальные даты
 										// Парсим также DTEND для расчета продолжительности
@@ -1420,13 +1420,18 @@ export class Caldav implements INodeType {
 							}
 							
 							// Извлекаем основную информацию о событии
-							const summaryMatch = eventData.match(/SUMMARY:(.+)/);
-							const descriptionMatch = eventData.match(/DESCRIPTION:(.+)/);
+							// RFC 5545 §3.5: any property may carry parameters between
+							// the property name and the value separator (e.g. Outlook /
+							// Exchange emit `SUMMARY;LANGUAGE=de-DE:...`). The non-
+							// capturing `(?:;[^:]*)?` swallows them so `:(.+)` lands on
+							// the value. Mirrors the existing DTSTART pattern.
+							const summaryMatch = eventData.match(/SUMMARY(?:;[^:]*)?:(.+)/);
+							const descriptionMatch = eventData.match(/DESCRIPTION(?:;[^:]*)?:(.+)/);
 							const dtStartMatch = eventData.match(/DTSTART[^:]*:(.+)/);
 							const dtEndMatch = eventData.match(/DTEND[^:]*:(.+)/);
-							const uidMatch = eventData.match(/UID:(.+)/);
-							const locationMatch = eventData.match(/LOCATION:(.+)/);
-							const webUrlMatch = eventData.match(/URL:(.+)/);
+							const uidMatch = eventData.match(/UID(?:;[^:]*)?:(.+)/);
+							const locationMatch = eventData.match(/LOCATION(?:;[^:]*)?:(.+)/);
+							const webUrlMatch = eventData.match(/URL(?:;[^:]*)?:(.+)/);
 
 							// Парсим даты для ISO формата
 							const dtStartRaw = dtStartMatch ? dtStartMatch[1].trim() : '';
@@ -1489,7 +1494,7 @@ export class Caldav implements INodeType {
 									
 									const eventData = 'BEGIN:VEVENT' + veventBlock.split('END:VEVENT')[0] + 'END:VEVENT';
 									const dtStartMatch = eventData.match(/DTSTART[^:]*:([^\r\n]+)/);
-									const summaryMatch = eventData.match(/SUMMARY:([^\r\n]+)/);
+									const summaryMatch = eventData.match(/SUMMARY(?:;[^:]*)?:([^\r\n]+)/);
 									
 									sampleEvents.push({
 										objectIndex: i,
